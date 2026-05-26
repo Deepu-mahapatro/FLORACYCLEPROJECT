@@ -1,0 +1,8 @@
+from django.apps import AppConfig
+ 
+ 
+class PickupsConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name  = 'apps.pickups'
+    label = 'pickups'
+    verbose_name = 'Pickup Requests'

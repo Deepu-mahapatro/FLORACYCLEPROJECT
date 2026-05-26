@@ -1,0 +1,1139 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FloraCycle — Admin Dashboard</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>" />
+  <style>
+    /* ── Dashboard Section Tabs ── */
+    .dash-section { display: none; }
+    .dash-section.active { display: block; }
+
+    /* Status badge colours */
+    .status-badge { display:inline-block; padding:3px 12px; border-radius:50px; font-size:.74rem; font-weight:600; }
+    .status-pending   { background:#fff3cd; color:#856404; }
+    .status-approved  { background:#d1ecf1; color:#0c5460; }
+    .status-collected { background:#cce5ff; color:#004085; }
+    .status-completed { background:#d4edda; color:#155724; }
+    .status-cancelled { background:#f8d7da; color:#721c24; }
+
+    /* Sidebar nav active */
+    .sidebar-nav a.active {
+      background: rgba(255,255,255,.15);
+      color: #fff !important;
+      font-weight: 700;
+    }
+
+    /* Product management grid */
+    .product-mgmt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; padding:4px 0; }
+    .product-mgmt-card {
+      background: var(--cream, #fafaf7);
+      border: 1.5px solid var(--green-light, #c3e6cb);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .product-mgmt-emoji { font-size: 2.2rem; flex-shrink:0; }
+    .product-mgmt-info  { flex: 1; min-width:0; }
+    .product-mgmt-actions { display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+
+    /* Form grid */
+    .add-product-form { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .add-product-form .form-group.full { grid-column:1/-1; }
+    @media(max-width:600px) { .add-product-form { grid-template-columns:1fr; } }
+
+    /* Section tab indicator */
+    .section-tab-bar {
+      display:flex; gap:6px; flex-wrap:wrap;
+      border-bottom: 2px solid var(--green-light,#c3e6cb);
+      margin-bottom: 24px; padding-bottom: 0;
+    }
+    .section-tab-bar .stab {
+      padding: 10px 20px; border-radius:8px 8px 0 0;
+      border: 1.5px solid transparent;
+      background: none; cursor:pointer;
+      font-family: 'DM Sans', sans-serif; font-size:.87rem; color: var(--text-light,#666);
+      transition: all .2s; border-bottom: none;
+    }
+    .section-tab-bar .stab.active {
+      background: #fff; border-color: var(--green-light,#c3e6cb);
+      border-bottom-color: #fff; color: var(--green-deep,#1b4332);
+      font-weight: 700; margin-bottom:-2px;
+    }
+    .section-tab-bar .stab:hover:not(.active) { background: var(--green-mist,#f0f7f2); }
+
+    /* Enquiry status badge */
+    .enq-status { display:inline-block; padding:2px 10px; border-radius:50px; font-size:.72rem; font-weight:600; }
+    .enq-open       { background:#fff3cd; color:#856404; }
+    .enq-responded  { background:#d4edda; color:#155724; }
+
+    /* Settings form */
+    .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; }
+    @media(max-width:600px) { .settings-grid { grid-template-columns:1fr; } }
+
+    /* Users table */
+    .role-chip { display:inline-block; padding:2px 10px; border-radius:50px; font-size:.72rem; font-weight:600; }
+    .role-chip.admin   { background:#e8d5ff; color:#5b21b6; }
+    .role-chip.partner { background:#d4edda; color:#155724; }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile sidebar toggle -->
+  <button class="dash-mobile-toggle" aria-label="Open sidebar">☰</button>
+  <div class="sidebar-overlay"></div>
+
+  <div class="dashboard-layout">
+
+    <!-- ============================================================
+         SIDEBAR
+         ============================================================ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <span>🌸</span> FloraCycle
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" data-section="overview" class="active">
+          <span class="nav-icon">📊</span> Overview
+        </a>
+        <a href="#" data-section="pickups">
+          <span class="nav-icon">🚚</span> Pickup Requests
+        </a>
+        <a href="#" data-section="products">
+          <span class="nav-icon">🛍️</span> Products
+        </a>
+        <a href="#" data-section="enquiries">
+          <span class="nav-icon">💬</span> Enquiries
+        </a>
+        <a href="#" data-section="users">
+          <span class="nav-icon">👥</span> Users
+        </a>
+        <hr class="sidebar-divider" />
+        <a href="#" data-section="settings">
+          <span class="nav-icon">⚙️</span> Settings
+        </a>
+        <a href="/">
+          <span class="nav-icon">🏠</span> Back to Site
+        </a>
+        <a href="#" id="sidebar-logout-btn" style="color:#ff8a80 !important;">
+          <span class="nav-icon">🚪</span> Logout
+        </a>
+      </nav>
+
+      <div class="sidebar-user-section">
+        <div class="sidebar-user-info" id="sidebar-user-info"></div>
+      </div>
+    </aside>
+
+    <!-- ============================================================
+         MAIN CONTENT
+         ============================================================ -->
+    <main class="main-content">
+
+      <!-- ── SECTION: OVERVIEW ── -->
+      <div id="section-overview" class="dash-section active">
+        <div class="dash-header">
+          <div>
+            <h1>Good Morning 🌿</h1>
+            <p>Here's what's happening with FloraCycle today.</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:.82rem;color:var(--text-light);" id="dash-date"></span>
+            <a href="/#pickup" class="btn-primary" style="padding:10px 20px;font-size:.85rem;text-decoration:none;">+ New Pickup</a>
+          </div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="stat-cards">
+          <div class="stat-card" style="cursor:pointer;" onclick="dashSwitch('pickups')">
+            <div class="stat-icon green">🚚</div>
+            <div class="stat-info">
+              <div class="value" id="stat-pickups">—</div>
+              <div class="label">Total Pickup Requests</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">🌸</div>
+            <div class="stat-info">
+              <div class="value" id="stat-flowers">— kg</div>
+              <div class="label">Flowers Collected</div>
+            </div>
+          </div>
+          <div class="stat-card" style="cursor:pointer;" onclick="dashSwitch('products')">
+            <div class="stat-icon orange">🛍️</div>
+            <div class="stat-info">
+              <div class="value" id="stat-products">—</div>
+              <div class="label">Total Products</div>
+            </div>
+          </div>
+          <div class="stat-card" style="cursor:pointer;" onclick="dashSwitch('enquiries')">
+            <div class="stat-icon purple">💬</div>
+            <div class="stat-info">
+              <div class="value" id="stat-enquiries">—</div>
+              <div class="label">Customer Enquiries</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Pickups -->
+        <div class="dash-panel">
+          <div class="panel-header">
+            <h3>Recent Pickup Requests</h3>
+            <button class="btn-outline-sm" onclick="dashSwitch('pickups')" style="padding:8px 18px;">View All</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Temple / Venue</th>
+                  <th>Flower Type</th>
+                  <th>Quantity</th>
+                  <th>Pickup Date</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="pickup-table-body">
+                <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Enquiries -->
+        <div class="dash-panel" style="margin-top:24px;">
+          <div class="panel-header">
+            <h3>Recent Enquiries</h3>
+            <button class="btn-outline-sm" onclick="dashSwitch('enquiries')" style="padding:8px 18px;">View All</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody id="recent-enquiry-table-body">
+                <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Eco Impact -->
+        <div class="dash-panel" style="margin-top:24px;">
+          <div class="panel-header"><h3>🌿 Eco Impact Summary</h3></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;">
+            <div style="background:var(--green-mist);border-radius:var(--radius-md);padding:20px;text-align:center;">
+              <div style="font-size:2rem;">🏭</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--green-deep);margin:6px 0;" id="eco-products">4</div>
+              <div style="font-size:.78rem;color:var(--text-light);">Products Created</div>
+            </div>
+            <div style="background:var(--green-mist);border-radius:var(--radius-md);padding:20px;text-align:center;">
+              <div style="font-size:2rem;">🌊</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--green-deep);margin:6px 0;">0</div>
+              <div style="font-size:.78rem;color:var(--text-light);">Rivers Protected</div>
+            </div>
+            <div style="background:var(--green-mist);border-radius:var(--radius-md);padding:20px;text-align:center;">
+              <div style="font-size:2rem;">👩‍🌾</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--green-deep);margin:6px 0;">12</div>
+              <div style="font-size:.78rem;color:var(--text-light);">Artisans Employed</div>
+            </div>
+            <div style="background:var(--green-mist);border-radius:var(--radius-md);padding:20px;text-align:center;">
+              <div style="font-size:2rem;">♻️</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--green-deep);margin:6px 0;">100%</div>
+              <div style="font-size:.78rem;color:var(--text-light);">Zero Landfill Rate</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: PICKUP REQUESTS ── -->
+      <div id="section-pickups" class="dash-section">
+        <div class="dash-header">
+          <div>
+            <h1>🚚 Pickup Requests</h1>
+            <p>Manage and update flower collection statuses.</p>
+          </div>
+        </div>
+
+        <!-- Status filter tabs -->
+        <div class="section-tab-bar" id="pickup-filter-tabs">
+          <button class="stab active" data-filter="all" onclick="filterPickups('all',this)">All</button>
+          <button class="stab" data-filter="Pending"   onclick="filterPickups('Pending',this)">⏳ Pending</button>
+          <button class="stab" data-filter="Approved"  onclick="filterPickups('Approved',this)">✅ Approved</button>
+          <button class="stab" data-filter="Collected" onclick="filterPickups('Collected',this)">📦 Collected</button>
+          <button class="stab" data-filter="Completed" onclick="filterPickups('Completed',this)">🏁 Completed</button>
+          <button class="stab" data-filter="Cancelled" onclick="filterPickups('Cancelled',this)">❌ Cancelled</button>
+        </div>
+
+        <div class="dash-panel">
+          <div class="panel-header">
+            <h3>All Requests <span id="pickup-count" style="font-size:.8rem;color:var(--text-light);font-weight:400;"></span></h3>
+            <input type="text" placeholder="Search temple / flower…" id="pickup-search"
+              style="padding:8px 14px;border:1.5px solid var(--green-light);border-radius:50px;
+                     font-size:.83rem;outline:none;background:var(--cream);" />
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Temple / Venue</th>
+                  <th>Contact</th>
+                  <th>Flower Type</th>
+                  <th>Qty (kg)</th>
+                  <th>Pickup Date</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="pickup-table-body-full">
+                <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: PRODUCTS ── -->
+      <div id="section-products" class="dash-section">
+        <div class="dash-header">
+          <div>
+            <h1>🛍️ Product Management</h1>
+            <p>Admin only — add, edit, and manage eco-products.</p>
+          </div>
+        </div>
+
+        <div class="section-tab-bar">
+          <button class="stab active" onclick="showProductTab('add',this)">➕ Add Product</button>
+          <button class="stab" onclick="showProductTab('list',this)">📋 All Products</button>
+        </div>
+
+        <!-- Add Product Form -->
+        <div id="prod-tab-add" class="dash-panel">
+          <div class="panel-header"><h3>Add New Product</h3></div>
+          <form id="add-product-form" class="add-product-form" novalidate>
+            <div class="form-group">
+              <label for="ap-name">Product Name *</label>
+              <input type="text" id="ap-name" placeholder="e.g. Lotus Incense" />
+            </div>
+            <div class="form-group">
+              <label for="ap-emoji">Emoji / Icon</label>
+              <input type="text" id="ap-emoji" placeholder="e.g. 🪷" maxlength="4" />
+            </div>
+            <div class="form-group full">
+              <label for="ap-desc">Description *</label>
+              <textarea id="ap-desc" rows="3" placeholder="Brief product description…"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="ap-eco">Eco Benefit</label>
+              <input type="text" id="ap-eco" placeholder="e.g. Saves 3kg flower waste" />
+            </div>
+            <div class="form-group">
+              <label for="ap-price">Price *</label>
+              <input type="text" id="ap-price" placeholder="e.g. ₹150 / pack" />
+            </div>
+            <div class="form-group">
+              <label for="ap-score">Eco Score</label>
+              <select id="ap-score" style="padding:10px 14px;border:1.5px solid var(--green-light);border-radius:8px;background:var(--cream);font-size:.9rem;">
+                <option value="A+">A+</option>
+                <option value="A" selected>A</option>
+                <option value="B+">B+</option>
+                <option value="B">B</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <div id="add-product-error" style="display:none;color:#c0392b;font-size:.85rem;padding:8px 12px;background:#fdecea;border-radius:8px;"></div>
+              <button type="submit" class="btn-primary" style="width:fit-content;margin-top:8px;">🌿 Add Product</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Products List -->
+        <div id="prod-tab-list" class="dash-panel" style="display:none;">
+          <div class="panel-header">
+            <h3>Current Products</h3>
+            <span id="product-count" style="font-size:.82rem;color:var(--text-light);"></span>
+          </div>
+          <div class="product-mgmt-grid" id="mgmt-products-grid">
+            <p style="color:var(--text-light);padding:20px;">Loading products…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: ENQUIRIES ── -->
+      <div id="section-enquiries" class="dash-section">
+        <div class="dash-header">
+          <div>
+            <h1>💬 Customer Enquiries</h1>
+            <p>All quote requests and customer messages.</p>
+          </div>
+        </div>
+
+        <div class="section-tab-bar">
+          <button class="stab active" onclick="filterEnquiries('all',this)">All</button>
+          <button class="stab" onclick="filterEnquiries('open',this)">🔔 Open</button>
+          <button class="stab" onclick="filterEnquiries('responded',this)">✅ Responded</button>
+        </div>
+
+        <div class="dash-panel">
+          <div class="panel-header">
+            <h3>Enquiries <span id="enq-count" style="font-size:.8rem;color:var(--text-light);font-weight:400;"></span></h3>
+            <input type="text" placeholder="Search by name / email…" id="enq-search"
+              style="padding:8px 14px;border:1.5px solid var(--green-light);border-radius:50px;
+                     font-size:.83rem;outline:none;background:var(--cream);" />
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Product</th>
+                  <th>Qty</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="enquiry-table-body">
+                <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: USERS ── -->
+      <div id="section-users" class="dash-section">
+        <div class="dash-header">
+          <div>
+            <h1>👥 Registered Users</h1>
+            <p>All partner accounts. Admin accounts are superusers only.</p>
+          </div>
+        </div>
+        <div class="dash-panel">
+          <div class="panel-header">
+            <h3>Users <span id="users-count" style="font-size:.8rem;color:var(--text-light);font-weight:400;"></span></h3>
+            <input type="text" placeholder="Search by name / email…" id="users-search"
+              style="padding:8px 14px;border:1.5px solid var(--green-light);border-radius:50px;
+                     font-size:.83rem;outline:none;background:var(--cream);" />
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Active</th>
+                  <th>Joined</th>
+                  <th>Last Login</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-light)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION: SETTINGS ── -->
+      <div id="section-settings" class="dash-section">
+        <div class="dash-header">
+          <div>
+            <h1>⚙️ Settings</h1>
+            <p>Manage your FloraCycle preferences and account.</p>
+          </div>
+        </div>
+
+        <div class="section-tab-bar">
+          <button class="stab active" onclick="showSettingsTab('general',this)">🏢 General</button>
+          <button class="stab" onclick="showSettingsTab('account',this)">👤 My Account</button>
+          <button class="stab" onclick="showSettingsTab('data',this)">💾 Data</button>
+        </div>
+
+        <!-- General -->
+        <div id="settings-tab-general" class="dash-panel">
+          <div class="panel-header"><h3>Organisation Settings</h3></div>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label>Organisation Name</label>
+              <input type="text" id="cfg-org" value="FloraCycle" />
+            </div>
+            <div class="form-group">
+              <label>Contact Email</label>
+              <input type="email" id="cfg-email" value="hello@floracycle.in" />
+            </div>
+            <div class="form-group">
+              <label>Contact Phone</label>
+              <input type="tel" id="cfg-phone" value="+91 88888 88888" />
+            </div>
+            <div class="form-group">
+              <label>City / Location</label>
+              <input type="text" id="cfg-city" value="Pune, Maharashtra" />
+            </div>
+          </div>
+          <button class="btn-primary" style="width:fit-content;margin-top:16px;" onclick="saveGeneralSettings()">💾 Save Settings</button>
+        </div>
+
+        <!-- Account (hidden initially) -->
+        <div id="settings-tab-account" class="dash-panel" style="display:none;">
+          <div class="panel-header"><h3>Admin Account</h3></div>
+          <div id="account-info" style="max-width:420px;">
+            <p style="color:var(--text-light);font-size:.88rem;">Loading account info…</p>
+          </div>
+          <hr style="margin:20px 0;" />
+          <div class="panel-header"><h3>Change Password</h3></div>
+          <div style="display:grid;gap:14px;max-width:420px;">
+            <div class="form-group">
+              <label>Current Password</label>
+              <input type="password" id="pw-old" placeholder="Enter current password" />
+            </div>
+            <div class="form-group">
+              <label>New Password</label>
+              <input type="password" id="pw-new" placeholder="Min 8 characters" />
+            </div>
+            <div class="form-group">
+              <label>Confirm New Password</label>
+              <input type="password" id="pw-new2" placeholder="Repeat new password" />
+            </div>
+            <div id="pw-error" style="display:none;color:#c0392b;font-size:.85rem;padding:8px 12px;background:#fdecea;border-radius:8px;"></div>
+            <button class="btn-primary" style="width:fit-content;" onclick="changePassword()">🔐 Update Password</button>
+          </div>
+        </div>
+
+        <!-- Data (hidden initially) -->
+        <div id="settings-tab-data" class="dash-panel" style="display:none;">
+          <div class="panel-header"><h3>Data Management</h3></div>
+          <p style="color:var(--text-light);font-size:.88rem;margin-bottom:16px;">Export or reset dashboard data. Destructive actions cannot be undone.</p>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="exportData()" style="padding:11px 22px;">📥 Export JSON</button>
+            <button style="padding:11px 22px;border:1.5px solid #ffb3b3;color:#c0392b;border-radius:50px;background:#fff;cursor:pointer;font-weight:600;"
+              onclick="resetDemoData()">⚠️ Reset Demo Data</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- end .dashboard-layout -->
+
+  <script src="{% static 'auth.js' %}"></script>
+  <script src="{% static 'script.js' %}"></script>
+  <script>
+  /* ==========================================================
+     DASHBOARD JS — Section routing · CRUD · Status management
+     Admin-only: product add/edit/delete, pickup status change
+     ========================================================== */
+
+  const _API = '/api/v1';
+
+  /* ── Date display ── */
+  const _dateEl = document.getElementById('dash-date');
+  if (_dateEl) _dateEl.textContent = new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  /* ── SECTION SWITCHER (global, callable from auth.js too) ── */
+  function dashSwitch(name) {
+    // Deactivate all sidebar links
+    document.querySelectorAll('.sidebar-nav [data-section]').forEach(l => l.classList.remove('active'));
+    // Hide all sections
+    document.querySelectorAll('.dash-section').forEach(s => s.classList.remove('active'));
+    // Activate target link + section
+    const link    = document.querySelector(`.sidebar-nav [data-section="${name}"]`);
+    const section = document.getElementById('section-' + name);
+    if (link)    link.classList.add('active');
+    if (section) section.classList.add('active');
+    // Load data for section
+    const loaders = {
+      overview:  () => { loadDashboardDataFromAPI(); },
+      pickups:   () => loadPickupsFull(),
+      products:  () => { loadProductsAdmin(); },
+      enquiries: () => loadEnquiriesAdmin(),
+      users:     () => loadUsersAdmin(),
+      settings:  () => { loadAccountInfo(); loadGeneralSettings(); },
+    };
+    if (loaders[name]) loaders[name]();
+  }
+
+  // Expose for auth.js usage
+  window.dashSwitchSection = dashSwitch;
+
+  /* ── Wire sidebar nav clicks ── */
+  document.querySelectorAll('.sidebar-nav [data-section]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      dashSwitch(link.dataset.section);
+    });
+  });
+
+  /* ==========================================================
+     SECTION: PICKUP REQUESTS
+     ========================================================== */
+  let _allPickups = [];
+  let _pickupFilter = 'all';
+
+  async function loadPickupsFull() {
+    const tbody = document.getElementById('pickup-table-body-full');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-light)">Loading…</td></tr>';
+    try {
+      const res  = await authFetch(`${_API}/pickups/all/`);
+      if (!res.ok) throw new Error('API error ' + res.status);
+      const data = await res.json();
+      _allPickups = data.results || data;
+    } catch {
+      _allPickups = JSON.parse(localStorage.getItem('fc_pickups') || '[]')
+        .map((p,i) => ({
+          id: p.id || i,
+          temple_name: p.temple || p.name,
+          full_name: p.full_name || p.name,
+          phone: p.phone || '-',
+          flower_type: p.flowerType || p.flower_type || '-',
+          quantity_kg: p.quantity || p.quantity_kg || 0,
+          pickup_date: p.pickupDate || p.pickup_date || '-',
+          submitted_on: p.submittedOn || '-',
+          status: p.status || 'Pending',
+        }));
+    }
+    renderPickupTable();
+  }
+
+  function renderPickupTable() {
+    const tbody = document.getElementById('pickup-table-body-full');
+    if (!tbody) return;
+    const q = (document.getElementById('pickup-search')?.value || '').toLowerCase();
+    let rows = _allPickups.filter(p => {
+      if (_pickupFilter !== 'all' && p.status !== _pickupFilter) return false;
+      if (q && !(p.temple_name||'').toLowerCase().includes(q) &&
+               !(p.flower_type||'').toLowerCase().includes(q) &&
+               !(p.full_name||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const countEl = document.getElementById('pickup-count');
+    if (countEl) countEl.textContent = `(${rows.length} of ${_allPickups.length})`;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-light)">No matching requests.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(p => `
+      <tr>
+        <td><strong>${p.temple_name || p.full_name || '-'}</strong></td>
+        <td style="font-size:.8rem;">${p.phone || '-'}</td>
+        <td>${p.flower_type || '-'}</td>
+        <td>${p.quantity_kg} kg</td>
+        <td>${p.pickup_date || '-'}</td>
+        <td style="font-size:.78rem;color:var(--text-light);">${(p.submitted_on||'').slice(0,10) || '-'}</td>
+        <td>
+          <select data-pickup-id="${p.id}"
+            onchange="updatePickupStatus(${p.id}, this.value, this)"
+            style="padding:5px 10px;border-radius:50px;border:1.5px solid var(--green-light);
+                   font-size:.75rem;background:var(--cream);cursor:pointer;outline:none;">
+            <option value="Pending"   ${p.status==='Pending'   ?'selected':''}>⏳ Pending</option>
+            <option value="Approved"  ${p.status==='Approved'  ?'selected':''}>✅ Approved</option>
+            <option value="Collected" ${p.status==='Collected' ?'selected':''}>📦 Collected</option>
+            <option value="Completed" ${p.status==='Completed' ?'selected':''}>🏁 Completed</option>
+            <option value="Cancelled" ${p.status==='Cancelled' ?'selected':''}>❌ Cancelled</option>
+          </select>
+        </td>
+      </tr>`).join('');
+  }
+
+  function filterPickups(filter, btn) {
+    _pickupFilter = filter;
+    document.querySelectorAll('#pickup-filter-tabs .stab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderPickupTable();
+  }
+
+  document.getElementById('pickup-search')?.addEventListener('input', renderPickupTable);
+
+  async function updatePickupStatus(id, newStatus, selectEl) {
+    if (selectEl) selectEl.disabled = true;
+    try {
+      const res = await authFetch(`${_API}/pickups/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        // Update local cache
+        const p = _allPickups.find(x => x.id === id);
+        if (p) p.status = newStatus;
+        showToast(`Status updated → ${newStatus} ✅`);
+      } else {
+        showToast('Failed to update status', 'error');
+        if (selectEl) selectEl.value = (_allPickups.find(x=>x.id===id)||{}).status || 'Pending';
+      }
+    } catch {
+      showToast('Network error — status not saved', 'error');
+    }
+    if (selectEl) selectEl.disabled = false;
+  }
+
+  /* ==========================================================
+     SECTION: PRODUCTS (Admin only)
+     ========================================================== */
+  function showProductTab(tab, btn) {
+    document.getElementById('prod-tab-add').style.display  = tab==='add'  ? '' : 'none';
+    document.getElementById('prod-tab-list').style.display = tab==='list' ? '' : 'none';
+    document.querySelectorAll('#section-products .stab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (tab === 'list') loadProductsAdmin();
+  }
+
+  async function loadProductsAdmin() {
+    const grid    = document.getElementById('mgmt-products-grid');
+    const countEl = document.getElementById('product-count');
+    if (!grid) return;
+    grid.innerHTML = '<p style="color:var(--text-light);padding:20px;">Loading…</p>';
+    try {
+      const res   = await authFetch(`${_API}/products/`);
+      if (!res.ok) throw new Error();
+      const data  = await res.json();
+      const prods = data.results || data;
+      if (countEl) countEl.textContent = `${prods.length} products in catalog`;
+      renderMgmtGrid(prods);
+    } catch {
+      const prods = JSON.parse(localStorage.getItem('fc_products') || '[]');
+      if (countEl) countEl.textContent = `${prods.length} products (demo)`;
+      renderMgmtGrid(prods);
+    }
+  }
+
+  function renderMgmtGrid(prods) {
+    const grid = document.getElementById('mgmt-products-grid');
+    if (!grid) return;
+    if (!prods.length) {
+      grid.innerHTML = '<p style="color:var(--text-light);padding:20px;">No products yet. Add one above.</p>';
+      return;
+    }
+    grid.innerHTML = prods.map(p => `
+      <div class="product-mgmt-card" data-id="${p.id}">
+        <div class="product-mgmt-emoji">${p.emoji || '🌿'}</div>
+        <div class="product-mgmt-info">
+          <strong>${p.name}</strong>
+          <p style="font-size:.82rem;color:var(--text-light);margin:2px 0;">${p.description||p.desc||''}</p>
+          <span style="font-size:.8rem;color:var(--green-leaf);font-weight:600;">${p.price||''}</span>
+          ${p.eco_score ? `<span style="margin-left:8px;font-size:.75rem;background:#d4edda;color:#155724;padding:1px 7px;border-radius:50px;">Eco ${p.eco_score}</span>` : ''}
+        </div>
+        <div class="product-mgmt-actions">
+          <button class="btn-outline-sm" onclick="editProduct(${p.id})" style="padding:6px 14px;">✏️ Edit</button>
+          <button class="btn-outline-sm" onclick="deleteProduct(${p.id})"
+            style="padding:6px 14px;border-color:#ffb3b3;color:#c0392b;">🗑️ Delete</button>
+        </div>
+      </div>`).join('');
+  }
+
+  /* Add product form */
+  document.addEventListener('DOMContentLoaded', () => {
+    const addForm = document.getElementById('add-product-form');
+    if (addForm) {
+      addForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const errEl = document.getElementById('add-product-error');
+        errEl.style.display = 'none';
+        const name  = document.getElementById('ap-name').value.trim();
+        const desc  = document.getElementById('ap-desc').value.trim();
+        const price = document.getElementById('ap-price').value.trim();
+        const emoji = document.getElementById('ap-emoji').value.trim() || '🌿';
+        const eco   = document.getElementById('ap-eco').value.trim();
+        const score = document.getElementById('ap-score').value;
+        if (!name || !desc || !price) {
+          errEl.textContent = 'Product name, description and price are required.';
+          errEl.style.display = 'block'; return;
+        }
+        const btn = addForm.querySelector('button[type=submit]');
+        btn.disabled = true; btn.textContent = 'Adding…';
+        try {
+          const res = await authFetch(`${_API}/products/create/`, {
+            method: 'POST',
+            body: JSON.stringify({ name, description: desc, price, emoji, eco_benefit: eco, eco_score: score }),
+          });
+          if (res.ok) {
+            addForm.reset();
+            document.getElementById('ap-emoji').value = '';
+            showToast(`${name} added to catalog! 🌿`);
+            loadProductsAdmin();
+            // Switch to list tab to show result
+            showProductTab('list', document.querySelectorAll('#section-products .stab')[1]);
+          } else {
+            const err = await res.json();
+            errEl.textContent = Object.values(err).flat()[0] || 'Failed to add product.';
+            errEl.style.display = 'block';
+          }
+        } catch {
+          // Demo fallback
+          const prods = JSON.parse(localStorage.getItem('fc_products') || '[]');
+          prods.push({ id: Date.now(), name, description: desc, price, emoji, eco_benefit: eco, eco_score: score });
+          localStorage.setItem('fc_products', JSON.stringify(prods));
+          addForm.reset();
+          showToast(`${name} added (demo mode) 🌿`);
+          loadProductsAdmin();
+        }
+        btn.disabled = false; btn.textContent = '🌿 Add Product';
+      });
+    }
+  });
+
+  async function deleteProduct(id) {
+    if (!confirm('Delete this product? This cannot be undone.')) return;
+    try {
+      const res = await authFetch(`${_API}/products/${id}/manage/`, { method: 'DELETE' });
+      if (res.ok || res.status === 204) { showToast('Product deleted.'); loadProductsAdmin(); }
+      else showToast('Failed to delete product.', 'error');
+    } catch {
+      let prods = JSON.parse(localStorage.getItem('fc_products') || '[]');
+      prods = prods.filter(p => p.id !== id);
+      localStorage.setItem('fc_products', JSON.stringify(prods));
+      showToast('Product deleted (demo mode).');
+      loadProductsAdmin();
+    }
+  }
+
+  function editProduct(id) {
+    const existing = document.getElementById('edit-product-modal');
+    if (existing) existing.remove();
+
+    authFetch(`${_API}/products/${id}/manage/`)
+      .then(r => { if(!r.ok) throw new Error(); return r.json(); })
+      .then(p => {
+        const modal = document.createElement('div');
+        modal.id = 'edit-product-modal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+          <div style="background:#fff;border-radius:16px;padding:32px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+            <h3 style="font-family:'Playfair Display',serif;color:#1b4332;margin-bottom:20px;">✏️ Edit Product</h3>
+            <div style="display:grid;gap:14px;">
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Name *</label>
+                <input id="ep-name" value="${p.name}" style="width:100%;padding:10px 14px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.9rem;box-sizing:border-box;" /></div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Emoji</label>
+                <input id="ep-emoji" value="${p.emoji||'🌿'}" maxlength="4" style="width:100%;padding:10px 14px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.9rem;box-sizing:border-box;" /></div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Description *</label>
+                <textarea id="ep-desc" rows="3" style="width:100%;padding:10px 14px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.9rem;box-sizing:border-box;resize:vertical;">${p.description||''}</textarea></div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Eco Benefit</label>
+                <input id="ep-eco" value="${p.eco_benefit||''}" style="width:100%;padding:10px 14px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.9rem;box-sizing:border-box;" /></div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Price *</label>
+                <input id="ep-price" value="${p.price||''}" style="width:100%;padding:10px 14px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.9rem;box-sizing:border-box;" /></div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Eco Score</label>
+                <select id="ep-score" style="width:100%;padding:10px 14px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.9rem;">
+                  <option ${p.eco_score==='A+'?'selected':''}>A+</option>
+                  <option ${p.eco_score==='A'?'selected':''}>A</option>
+                  <option ${p.eco_score==='B+'?'selected':''}>B+</option>
+                  <option ${p.eco_score==='B'?'selected':''}>B</option>
+                </select></div>
+            </div>
+            <div id="ep-error" style="display:none;color:#c0392b;font-size:.85rem;padding:8px 12px;background:#fdecea;border-radius:8px;margin-top:12px;"></div>
+            <div style="display:flex;gap:12px;margin-top:22px;justify-content:flex-end;">
+              <button onclick="document.getElementById('edit-product-modal').remove()"
+                style="padding:10px 20px;border:1.5px solid #ccc;border-radius:50px;background:#fff;cursor:pointer;font-size:.85rem;">Cancel</button>
+              <button onclick="saveEditProduct(${p.id})"
+                style="padding:10px 24px;background:linear-gradient(135deg,#52b788,#2d6a4f);color:#fff;border:none;border-radius:50px;cursor:pointer;font-size:.85rem;font-weight:600;">💾 Save</button>
+            </div>
+          </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+      })
+      .catch(() => showToast('Could not load product details.', 'error'));
+  }
+
+  async function saveEditProduct(id) {
+    const errEl = document.getElementById('ep-error');
+    const name  = document.getElementById('ep-name')?.value.trim();
+    const desc  = document.getElementById('ep-desc')?.value.trim();
+    const price = document.getElementById('ep-price')?.value.trim();
+    const emoji = document.getElementById('ep-emoji')?.value.trim();
+    const eco   = document.getElementById('ep-eco')?.value.trim();
+    const score = document.getElementById('ep-score')?.value;
+    if (!name || !desc || !price) {
+      if(errEl){errEl.textContent='Name, description and price are required.';errEl.style.display='block';}
+      return;
+    }
+    try {
+      const res = await authFetch(`${_API}/products/${id}/manage/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name, description: desc, price, emoji, eco_benefit: eco, eco_score: score }),
+      });
+      if (res.ok) {
+        document.getElementById('edit-product-modal')?.remove();
+        showToast(`${name} updated ✅`);
+        loadProductsAdmin();
+      } else {
+        const err = await res.json();
+        if(errEl){errEl.textContent=Object.values(err).flat()[0]||'Update failed.';errEl.style.display='block';}
+      }
+    } catch {
+      if(errEl){errEl.textContent='Network error. Please try again.';errEl.style.display='block';}
+    }
+  }
+
+  /* ==========================================================
+     SECTION: ENQUIRIES
+     ========================================================== */
+  let _allEnquiries = [];
+  let _enqFilter = 'all';
+
+  async function loadEnquiriesAdmin() {
+    const tbody = document.getElementById('enquiry-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-light)">Loading…</td></tr>';
+    try {
+      const res  = await authFetch(`${_API}/enquiries/all/`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      _allEnquiries = data.results || data;
+    } catch {
+      _allEnquiries = JSON.parse(localStorage.getItem('fc_enquiries') || '[]')
+        .map((e,i) => ({
+          id: e.id||i, customer_name: e.name||e.customer_name||'-',
+          product_name: e.product||e.product_name||'General', quantity: e.quantity||'-',
+          email: e.email||'-', phone: e.phone||'-', message: e.message||'-',
+          is_responded: e.is_responded||false,
+        }));
+    }
+    renderEnquiries();
+  }
+
+  function filterEnquiries(filter, btn) {
+    _enqFilter = filter;
+    document.querySelectorAll('#section-enquiries .stab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderEnquiries();
+  }
+
+  function renderEnquiries() {
+    const tbody = document.getElementById('enquiry-table-body');
+    if (!tbody) return;
+    const q = (document.getElementById('enq-search')?.value||'').toLowerCase();
+    let rows = _allEnquiries.filter(e => {
+      if (_enqFilter==='open' && e.is_responded) return false;
+      if (_enqFilter==='responded' && !e.is_responded) return false;
+      if (q && !(e.customer_name||'').toLowerCase().includes(q) && !(e.email||'').toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const countEl = document.getElementById('enq-count');
+    if (countEl) countEl.textContent = `(${rows.length} of ${_allEnquiries.length})`;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-light)">No enquiries found.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(e => `
+      <tr>
+        <td><strong>${e.customer_name||'-'}</strong></td>
+        <td>${e.product_name||'General'}</td>
+        <td>${e.quantity||'-'}</td>
+        <td>${e.email||'-'}</td>
+        <td>${e.phone||'-'}</td>
+        <td style="max-width:160px;word-wrap:break-word;font-size:.82rem;">${e.message||'-'}</td>
+        <td><span class="enq-status ${e.is_responded?'enq-responded':'enq-open'}">${e.is_responded?'✅ Responded':'🔔 Open'}</span></td>
+        <td>
+          ${!e.is_responded ? `<button class="btn-outline-sm" onclick="markEnquiryResponded(${e.id})" style="padding:4px 10px;font-size:.75rem;">Mark Responded</button>` : '—'}
+        </td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('enq-search')?.addEventListener('input', renderEnquiries);
+
+  async function markEnquiryResponded(id) {
+    try {
+      const res = await authFetch(`${_API}/enquiries/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_responded: true }),
+      });
+      if (res.ok) {
+        const e = _allEnquiries.find(x => x.id===id);
+        if (e) e.is_responded = true;
+        showToast('Marked as responded ✅');
+        renderEnquiries();
+      } else {
+        showToast('Could not update enquiry.', 'error');
+      }
+    } catch {
+      // demo mode
+      const e = _allEnquiries.find(x => x.id===id);
+      if (e) { e.is_responded = true; renderEnquiries(); showToast('Marked as responded (demo) ✅'); }
+    }
+  }
+
+  /* ==========================================================
+     SECTION: USERS
+     ========================================================== */
+  async function loadUsersAdmin() {
+    const tbody = document.getElementById('users-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-light)">Loading…</td></tr>';
+    try {
+      const res  = await authFetch(`${_API}/auth/users/`);
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      const users = data.results || data;
+      const countEl = document.getElementById('users-count');
+      if (countEl) countEl.textContent = `(${users.length} registered)`;
+      const q = (document.getElementById('users-search')?.value||'').toLowerCase();
+      const rows = q ? users.filter(u => (u.full_name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)) : users;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-light)">No users found.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((u,i) => `
+        <tr>
+          <td>${i+1}</td>
+          <td><strong>${u.full_name||'-'}</strong></td>
+          <td>${u.email||'-'}</td>
+          <td>${u.phone||'-'}</td>
+          <td><span class="role-chip ${u.role}">${u.role==='admin'?'👑 Admin':'🌸 Partner'}</span></td>
+          <td>${u.is_active ? '✅ Active' : '❌ Inactive'}</td>
+          <td style="font-size:.8rem;color:var(--text-light);">${(u.created_at||'').slice(0,10)||'-'}</td>
+          <td style="font-size:.8rem;color:var(--text-light);">${u.last_login ? u.last_login.slice(0,10) : '—'}</td>
+        </tr>`).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-light)">Could not load users. Check API connectivity.</td></tr>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('users-search')?.addEventListener('input', loadUsersAdmin);
+  });
+
+  /* ==========================================================
+     SECTION: SETTINGS
+     ========================================================== */
+  function showSettingsTab(tab, btn) {
+    ['general','account','data'].forEach(t => {
+      document.getElementById(`settings-tab-${t}`).style.display = t===tab ? '' : 'none';
+    });
+    document.querySelectorAll('#section-settings .stab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    if (tab === 'account') loadAccountInfo();
+    if (tab === 'general') loadGeneralSettings();
+  }
+
+  function loadAccountInfo() {
+    const user = Auth.getUser();
+    const el   = document.getElementById('account-info');
+    if (!el || !user) return;
+    el.innerHTML = `
+      <div style="display:grid;gap:12px;">
+        <div class="form-group"><label>Full Name</label><input type="text" value="${user.full_name||''}" readonly style="background:#f5f5f5;" /></div>
+        <div class="form-group"><label>Email</label><input type="email" value="${user.email||''}" readonly style="background:#f5f5f5;" /></div>
+        <div class="form-group"><label>Role</label><input type="text" value="👑 Admin (Superuser)" readonly style="background:#f5f5f5;" /></div>
+      </div>`;
+  }
+
+  async function saveGeneralSettings() {
+    const settings = {
+      org:   document.getElementById('cfg-org')?.value   || '',
+      email: document.getElementById('cfg-email')?.value || '',
+      phone: document.getElementById('cfg-phone')?.value || '',
+      city:  document.getElementById('cfg-city')?.value  || '',
+    };
+    try {
+      const res = await authFetch(`${_API}/auth/settings/`, {
+        method: 'POST',
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error('API error');
+      showToast('Settings saved ✅');
+    } catch {
+      showToast('⚠️ Could not save settings. Check connectivity.');
+    }
+  }
+
+  async function loadGeneralSettings() {
+    try {
+      const res = await authFetch(`${_API}/auth/settings/`);
+      if (!res.ok) return;
+      const s = await res.json();
+      if (s.org)   { const el = document.getElementById('cfg-org');   if (el) el.value = s.org;   }
+      if (s.email) { const el = document.getElementById('cfg-email'); if (el) el.value = s.email; }
+      if (s.phone) { const el = document.getElementById('cfg-phone'); if (el) el.value = s.phone; }
+      if (s.city)  { const el = document.getElementById('cfg-city');  if (el) el.value = s.city;  }
+    } catch { /* silently skip if not authenticated yet */ }
+  }
+
+  async function changePassword() {
+    const errEl = document.getElementById('pw-error');
+    errEl.style.display = 'none';
+    const old = document.getElementById('pw-old')?.value;
+    const n1  = document.getElementById('pw-new')?.value;
+    const n2  = document.getElementById('pw-new2')?.value;
+    if (!old || !n1 || !n2) { errEl.textContent='All fields are required.'; errEl.style.display='block'; return; }
+    if (n1 !== n2) { errEl.textContent='New passwords do not match.'; errEl.style.display='block'; return; }
+    if (n1.length < 8) { errEl.textContent='Password must be at least 8 characters.'; errEl.style.display='block'; return; }
+    try {
+      const res = await authFetch(`${_API}/auth/change-password/`, {
+        method: 'POST',
+        body: JSON.stringify({ old_password: old, new_password: n1, new_password2: n2 }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Password changed! Please log in again.');
+        setTimeout(() => logoutUser(), 1500);
+      } else {
+        errEl.textContent = data.old_password?.[0] || data.new_password?.[0] || data.detail || 'Password change failed.';
+        errEl.style.display = 'block';
+      }
+    } catch {
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = 'block';
+    }
+  }
+
+  /* Load saved settings from DB on page load */
+  document.addEventListener('DOMContentLoaded', () => {
+    loadGeneralSettings();
+  });
+
+  async function exportData() {
+    let settingsData = {};
+    try {
+      const res = await authFetch(`${_API}/auth/settings/`);
+      if (res.ok) settingsData = await res.json();
+    } catch { /* skip */ }
+    const data = {
+      pickups:   _allPickups,
+      enquiries: _allEnquiries,
+      settings:  settingsData,
+      exported:  new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'floracycle-export.json';
+    a.click(); URL.revokeObjectURL(url);
+    showToast('Data exported 📥');
+  }
+
+  function resetDemoData() {
+    if (!confirm('Reset all demo / local data? API data will not be deleted.')) return;
+    ['fc_pickups','fc_enquiries','fc_products'].forEach(k => localStorage.removeItem(k));
+    showToast('Demo data cleared. Reloading…');
+    setTimeout(() => location.reload(), 1200);
+  }
+
+  /* ==========================================================
+     MOBILE SIDEBAR
+     ========================================================== */
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle  = document.querySelector('.dash-mobile-toggle');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const sidebar = document.getElementById('sidebar');
+    toggle?.addEventListener('click', () => sidebar?.classList.toggle('open'));
+    overlay?.addEventListener('click', () => sidebar?.classList.remove('open'));
+  });
+  </script>
+</body>
+</html>
