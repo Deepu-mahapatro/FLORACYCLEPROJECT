@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🌸 FloraCycle — Eco Flower Waste Management Platform (v2 Fixed)
 
 FloraCycle collects flower waste from temples and venues, converts it into eco-products (agarbatti, compost, Holi colors), and sells them back through a clean web platform.
@@ -141,3 +142,6 @@ curl -X POST http://localhost:8000/api/v1/pickups/ \
   -H "Content-Type: application/json" \
   -d '{"full_name":"Arjun Patel","temple_name":"Shree Ram Temple","phone":"9876543210","location":"Pune","flower_type":"Marigold","quantity_kg":15,"pickup_date":"2026-06-01"}'
 ```
+=======
+# FLORACYCLEPROJECT
+>>>>>>> 824a0773f7140d7d503e9902f650a953cb01f93f
