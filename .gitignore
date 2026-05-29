@@ -1,8 +1,47 @@
-env/
-venv/
+# Environment secrets
+.env
+.env.docker
+.env.local
+.env.production
+
+# Python cache
 __pycache__/
 *.pyc
-.env
+*.pyo
+*.pyd
+*.pycache
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Django
 db.sqlite3
+*.sqlite3
 staticfiles/
 media/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code / Editors
+.vscode/
+.idea/
+
+# Testing / Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Docker local volumes
+postgres_data/
+
+# Logs
+*.log

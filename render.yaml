@@ -1,0 +1,71 @@
+# ── FloraCycle — render.yaml ──────────────────────────────────
+# Infrastructure-as-code for Render.com deployment.
+# Optional: you can also configure everything manually in the Render dashboard.
+# Docs: https://render.com/docs/render-yaml
+ 
+services:
+  - type: web
+    name: floracycle
+    runtime: docker                    # tells Render to use your Dockerfile
+    dockerfilePath: ./Dockerfile       # path to Dockerfile from repo root
+    plan: free                         # change to "starter" for paid plan
+    region: singapore                  # closest to Hyderabad, India
+ 
+    healthCheckPath: /                 # Render pings this to confirm app is up
+ 
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true            # Render auto-generates a secure key
+ 
+      - key: DEBUG
+        value: "False"
+ 
+      - key: ALLOWED_HOSTS
+        value: "floracycle.onrender.com"   # replace with your actual Render URL
+ 
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://floracycle.onrender.com"
+ 
+      # ── Database (from Render PostgreSQL add-on below) ──────
+      - key: DB_NAME
+        fromDatabase:
+          name: floracycle-db
+          property: database
+ 
+      - key: DB_USER
+        fromDatabase:
+          name: floracycle-db
+          property: user
+ 
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: floracycle-db
+          property: password
+ 
+      - key: DB_HOST
+        fromDatabase:
+          name: floracycle-db
+          property: host
+ 
+      - key: DB_PORT
+        fromDatabase:
+          name: floracycle-db
+          property: port
+ 
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://floracycle.onrender.com"
+ 
+      - key: ACCESS_TOKEN_LIFETIME_MINUTES
+        value: "60"
+ 
+      - key: REFRESH_TOKEN_LIFETIME_DAYS
+        value: "7"
+ 
+      - key: MEDIA_URL
+        value: "/media/"
+ 
+# ── PostgreSQL Database ─────────────────────────────────────
+databases:
+  - name: floracycle-db
+    plan: free
+    region: singapore
