@@ -10,33 +10,104 @@ on:
       - main
 
 jobs:
+
   build:
 
     runs-on: ubuntu-latest
 
+    services:
+
+      postgres:
+        image: postgres:16-alpine
+
+        env:
+          POSTGRES_DB: floracycle
+          POSTGRES_USER: floracycle_user
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U floracycle_user -d floracycle"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+
     steps:
 
+      # ============================================================
+      # 1. Checkout Repository
+      # ============================================================
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+
+      # ============================================================
+      # 2. Setup Python 3.12
+      # ============================================================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+
+      # ============================================================
+      # 3. Install Dependencies
+      # ============================================================
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+
+      # ============================================================
+      # 4. Create Temporary Environment File
+      # ============================================================
+      - name: Create Environment File
+        run: |
+          cat > .env << EOF
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          DEBUG=False
+          ALLOWED_HOSTS=localhost,127.0.0.1
+
+          CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+
+          DB_NAME=floracycle
+          DB_USER=floracycle_user
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_HOST=127.0.0.1
+          DB_PORT=5432
+
+          ACCESS_TOKEN_LIFETIME_MINUTES=60
+          REFRESH_TOKEN_LIFETIME_DAYS=7
+
+          CORS_ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+
+          MEDIA_URL=/media/
+          EOF
+
+
+      # ============================================================
+      # 5. Run Database Migrations
+      # ============================================================
       - name: Run Migrations
         run: |
           python manage.py migrate
 
+
+      # ============================================================
+      # 6. Run Django System Check
+      # ============================================================
       - name: Run Django Check
         run: |
           python manage.py check
 
+
+      # ============================================================
+      # 7. Run Django Tests
+      # ============================================================
       - name: Run Django Tests
         run: |
           python manage.py test

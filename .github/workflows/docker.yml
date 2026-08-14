@@ -21,4 +21,4 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t floracycle .
+          docker build -t floracycle:latest  .

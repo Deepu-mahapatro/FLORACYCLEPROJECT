@@ -15,17 +15,94 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ============================================================
+      # 1. Checkout the repository
+      # ============================================================
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+
+      # ============================================================
+      # 2. Create temporary .env file from GitHub Secrets
+      # ============================================================
+      # The real .env file is NOT stored in GitHub.
+      # GitHub Actions creates it temporarily during this workflow.
+      # ============================================================
+      - name: Create Environment File
+        run: |
+          cat > .env << EOF
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          DEBUG=${{ secrets.DEBUG }}
+          ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+          CSRF_TRUSTED_ORIGINS=${{ secrets.CSRF_TRUSTED_ORIGINS }}
+
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_PORT=${{ secrets.DB_PORT }}
+
+          ACCESS_TOKEN_LIFETIME_MINUTES=${{ secrets.ACCESS_TOKEN_LIFETIME_MINUTES }}
+          REFRESH_TOKEN_LIFETIME_DAYS=${{ secrets.REFRESH_TOKEN_LIFETIME_DAYS }}
+
+          CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
+          MEDIA_URL=${{ secrets.MEDIA_URL }}
+          EOF
+
+
+      # ============================================================
+      # 3. Build and start PostgreSQL + Django containers
+      # ============================================================
       - name: Build and Start Containers
         run: |
           docker compose up --build -d
 
+
+      # ============================================================
+      # 4. Show running containers
+      # ============================================================
       - name: Show Running Containers
         run: |
-          docker ps
+          docker compose ps
 
+
+      # ============================================================
+      # 5. Check Django configuration
+      # ============================================================
+      - name: Run Django Check
+        run: |
+          docker compose exec -T web python manage.py check
+
+
+      # ============================================================
+      # 6. Run database migrations
+      # ============================================================
+      - name: Run Database Migrations
+        run: |
+          docker compose exec -T web python manage.py migrate
+
+
+      # ============================================================
+      # 7. Run Django tests
+      # ============================================================
+      - name: Run Django Tests
+        run: |
+          docker compose exec -T web python manage.py test
+
+
+      # ============================================================
+      # 8. Show logs if something fails
+      # ============================================================
+      - name: Show Container Logs
+        if: failure()
+        run: |
+          docker compose logs
+
+
+      # ============================================================
+      # 9. Stop containers
+      # ============================================================
       - name: Stop Containers
         if: always()
         run: |
