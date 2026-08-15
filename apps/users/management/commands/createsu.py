@@ -10,7 +10,6 @@ class Command(BaseCommand):
     help = "Create or update the FloraCycle superuser"
 
     def handle(self, *args, **kwargs):
-
         email = os.environ.get("DJANGO_SUPERUSER_EMAIL")
         password = os.environ.get("DJANGO_SUPERUSER_PASSWORD")
 
