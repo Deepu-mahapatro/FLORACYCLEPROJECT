@@ -353,6 +353,16 @@
                 <option value="B">B</option>
               </select>
             </div>
+            <div class="form-group">
+              <label for="ap-ref-image">Reference Image</label>
+              <input type="file" id="ap-ref-image" accept="image/*"
+                style="padding:8px 10px;border:1.5px solid var(--green-light);border-radius:8px;background:var(--cream);font-size:.85rem;cursor:pointer;" />
+            </div>
+            <div class="form-group">
+              <label for="ap-product-image">Product Image</label>
+              <input type="file" id="ap-product-image" accept="image/*"
+                style="padding:8px 10px;border:1.5px solid var(--green-light);border-radius:8px;background:var(--cream);font-size:.85rem;cursor:pointer;" />
+            </div>
             <div class="form-group full">
               <div id="add-product-error" style="display:none;color:#c0392b;font-size:.85rem;padding:8px 12px;background:#fdecea;border-radius:8px;"></div>
               <button type="submit" class="btn-primary" style="width:fit-content;margin-top:8px;">🌿 Add Product</button>
@@ -752,6 +762,8 @@
         const emoji = document.getElementById('ap-emoji').value.trim() || '🌿';
         const eco   = document.getElementById('ap-eco').value.trim();
         const score = document.getElementById('ap-score').value;
+        const refImageInput = document.getElementById('ap-ref-image');
+        const prodImageInput = document.getElementById('ap-product-image');
         if (!name || !desc || !price) {
           errEl.textContent = 'Product name, description and price are required.';
           errEl.style.display = 'block'; return;
@@ -759,9 +771,18 @@
         const btn = addForm.querySelector('button[type=submit]');
         btn.disabled = true; btn.textContent = 'Adding…';
         try {
+          const formData = new FormData();
+          formData.append('name', name);
+          formData.append('description', desc);
+          formData.append('price', price);
+          formData.append('emoji', emoji);
+          formData.append('eco_benefit', eco);
+          formData.append('eco_score', score);
+          if (refImageInput?.files[0]) formData.append('reference_image', refImageInput.files[0]);
+          if (prodImageInput?.files[0]) formData.append('image', prodImageInput.files[0]);
           const res = await authFetch(`${_API}/products/create/`, {
             method: 'POST',
-            body: JSON.stringify({ name, description: desc, price, emoji, eco_benefit: eco, eco_score: score }),
+            body: formData,
           });
           if (res.ok) {
             addForm.reset();
@@ -835,6 +856,12 @@
                   <option ${p.eco_score==='B+'?'selected':''}>B+</option>
                   <option ${p.eco_score==='B'?'selected':''}>B</option>
                 </select></div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Reference Image</label>
+                <input type="file" id="ep-ref-image" accept="image/*" style="width:100%;padding:8px 10px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.85rem;box-sizing:border-box;cursor:pointer;" />
+                ${p.reference_image_url ? `<img src="${p.reference_image_url}" style="max-width:120px;max-height:80px;margin-top:6px;border-radius:6px;border:1px solid #e0e0e0;" />` : ''}</div>
+              <div><label style="font-size:.82rem;font-weight:600;color:#555;display:block;margin-bottom:5px;">Product Image</label>
+                <input type="file" id="ep-product-image" accept="image/*" style="width:100%;padding:8px 10px;border:1.5px solid #c3e6cb;border-radius:8px;font-size:.85rem;box-sizing:border-box;cursor:pointer;" />
+                ${p.image_url ? `<img src="${p.image_url}" style="max-width:120px;max-height:80px;margin-top:6px;border-radius:6px;border:1px solid #e0e0e0;" />` : ''}</div>
             </div>
             <div id="ep-error" style="display:none;color:#c0392b;font-size:.85rem;padding:8px 12px;background:#fdecea;border-radius:8px;margin-top:12px;"></div>
             <div style="display:flex;gap:12px;margin-top:22px;justify-content:flex-end;">
@@ -863,9 +890,20 @@
       return;
     }
     try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('description', desc);
+      formData.append('price', price);
+      formData.append('emoji', emoji);
+      formData.append('eco_benefit', eco);
+      formData.append('eco_score', score);
+      const refImg = document.getElementById('ep-ref-image');
+      const prodImg = document.getElementById('ep-product-image');
+      if (refImg?.files[0]) formData.append('reference_image', refImg.files[0]);
+      if (prodImg?.files[0]) formData.append('image', prodImg.files[0]);
       const res = await authFetch(`${_API}/products/${id}/manage/`, {
         method: 'PATCH',
-        body: JSON.stringify({ name, description: desc, price, emoji, eco_benefit: eco, eco_score: score }),
+        body: formData,
       });
       if (res.ok) {
         document.getElementById('edit-product-modal')?.remove();

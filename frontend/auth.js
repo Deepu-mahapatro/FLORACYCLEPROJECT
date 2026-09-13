@@ -62,10 +62,12 @@ async function authFetch(url, options = {}) {
     const ok = await refreshAccessToken();
     if (!ok) { Auth.clear(); window.location.href = '/'; return; }
   }
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
+  const headers = { ...(options.headers || {}) };
+  // Only set Content-Type for non-FormData requests;
+  // FormData needs the browser to auto-set multipart/form-data with boundary
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
   if (Auth.getAccess()) {
     headers['Authorization'] = `Bearer ${Auth.getAccess()}`;
   }

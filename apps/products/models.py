@@ -19,6 +19,7 @@ class Product(models.Model):
     ingredients = models.TextField(blank=True)
     color       = models.CharField(max_length=10, default='#e8f2eb', help_text='CSS hex color for card background')
     image       = models.ImageField(upload_to='products/', null=True, blank=True)
+    reference_image = models.ImageField(upload_to='products/references/', null=True, blank=True)
     is_active   = models.BooleanField(default=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)

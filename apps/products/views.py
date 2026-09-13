@@ -6,6 +6,7 @@ Product views:
   - Admin PATCH/DELETE → update or delete a product
 """
 from rest_framework import generics, permissions, filters
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.permissions import IsAdminRole
 from .models import Product
@@ -45,10 +46,12 @@ class ProductCreateView(generics.CreateAPIView):
     """
     POST /api/v1/products/create/
     Admin-only: add a new product to the catalogue.
+    Accepts multipart/form-data for image uploads.
     """
     queryset           = Product.objects.all()
     serializer_class   = ProductSerializer
     permission_classes = [IsAdminRole]
+    parser_classes     = [MultiPartParser, FormParser, JSONParser]
 
 
 # ── Admin: update / delete product ────────────────────────────
@@ -57,10 +60,12 @@ class ProductUpdateDeleteView(generics.RetrieveUpdateDestroyAPIView):
     GET    /api/v1/products/<pk>/manage/  → full detail (admin)
     PATCH  /api/v1/products/<pk>/manage/  → partial update
     DELETE /api/v1/products/<pk>/manage/  → soft-delete (sets is_active=False)
+    Accepts multipart/form-data for image uploads.
     """
     queryset           = Product.objects.all()
     serializer_class   = ProductSerializer
     permission_classes = [IsAdminRole]
+    parser_classes     = [MultiPartParser, FormParser, JSONParser]
 
     def perform_destroy(self, instance):
         # Soft delete — keeps the row, just hides it from public views

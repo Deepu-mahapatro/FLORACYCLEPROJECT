@@ -11,7 +11,7 @@ class ProductAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
  
     fieldsets = (
-        ('Basic',         {'fields': ('name', 'emoji', 'color', 'image', 'is_active')}),
+        ('Basic',         {'fields': ('name', 'emoji', 'color', 'image', 'reference_image', 'is_active')}),
         ('Description',   {'fields': ('description', 'full_desc')}),
         ('Eco Info',      {'fields': ('eco_benefit', 'eco_score', 'impact', 'ingredients')}),
         ('Pricing',       {'fields': ('price',)}),
